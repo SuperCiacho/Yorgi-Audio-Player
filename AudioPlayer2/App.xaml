@@ -1,0 +1,26 @@
+﻿<Application x:Class="AudioPlayer2.App" 
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             d1p1:Ignorable="d" 
+             xmlns:d1p1="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:converters="clr-namespace:AudioPlayer2.Converters">
+    <Application.Resources>
+        <converters:DebugConverter x:Key="DebugConverter" />
+
+        <Color x:Key="LightBlue">#FFACC6E0</Color>
+        <Color x:Key="BlueGray">#FF3A4C6D</Color>
+
+        <SolidColorBrush x:Key="AppBackground" Color="#3875B2" />
+        <SolidColorBrush x:Key="RowColor" Color="#7597B9" />
+        <SolidColorBrush x:Key="AltRowColor" Color="#82A5C7" />
+        <SolidColorBrush x:Key="SelectedRow" Color="{StaticResource BlueGray}" />
+        <SolidColorBrush x:Key="TextColor" Color="#FFFF" />
+        <SolidColorBrush x:Key="LinesColor" Color="#6C99C5" />
+        <SolidColorBrush x:Key="ThumbOutside" Color="#FFA8B300" />
+        <SolidColorBrush x:Key="ThumbInside" Color="#99B3BB32" />
+        <SolidColorBrush x:Key="ToolbarBackground" Color="{StaticResource BlueGray}"/>
+        <SolidColorBrush x:Key="TimerBackground" Color="{StaticResource LightBlue}" />
+        
+    </Application.Resources>
+</Application>
