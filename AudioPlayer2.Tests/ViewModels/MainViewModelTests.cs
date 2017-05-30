@@ -1,4 +1,7 @@
 ﻿using AudioPlayer2.Models;
+using AudioPlayer2.Models.Audio;
+using AudioPlayer2.Models.Playlist;
+using AudioPlayer2.Models.Tag;
 using Moq;
 using NUnit.Framework;
 using Ploeh.AutoFixture;
@@ -16,45 +19,66 @@ namespace AudioPlayer2.ViewModels.Tests
         [Test]
         public void Whether_PlayingSound_On_PlayCommand_Execution()
         {
-            var isPlaying = false;
-            var trackPath = this.factory.Create<string>();
-            this.audioPlayerMock.Setup(x => x.Play(trackPath)).Callback(() => isPlaying = true);
-            this.audioPlayerMock.Setup(player => player.IsPlaying).Returns(isPlaying);
-            Track track = new Track(this.tagManagerMock.Object, trackPath);
+            var track = this.factory.Create<Track>();
+            this.audioPlayerMock.Setup(x => x.Play());
+            this.audioPlayerMock.Setup(x => x.IsPaused).Returns(false);
 
             this.testViewModel.PlayCommand.Execute(track);
 
-            this.audioPlayerMock.Verify(x => x.Play(trackPath), Times.Once());
-            this.audioPlayerMock.Verify(x => x.IsPlaying, Times.Once());
-
-            Assert.That(isPlaying, Is.True);
+            this.audioPlayerMock.Verify(x => x.Play(), Times.Once());
         }
 
         [Test]
         public void Whether_SoundIsPaused_On_PlayCommand_SecondExecution()
         {
-            var trackPath = this.factory.Create<string>();
-            var isPaused = false;
-            this.audioPlayerMock.Setup(x => x.Pause()).Callback(() => isPaused = true);
-            this.audioPlayerMock.Setup(player => player.IsPlaying).Returns(!isPaused);
-            this.audioPlayerMock.Setup(player => player.IsPaused).Returns(isPaused);
-            this.audioPlayerMock.Setup(player => player.CurrentTrack).Returns(trackPath);
-            Track track = new Track(this.tagManagerMock.Object, trackPath);
-            this.testViewModel.SelectedTrack = track;
+            this.audioPlayerMock.Setup(x => x.Play());
+            this.audioPlayerMock.Setup(x => x.IsPaused).Returns(false);
+            var track = this.factory.Create<Track>();
 
             this.testViewModel.PlayCommand.Execute(track);
+            this.testViewModel.TrackDuration = 100;
+            this.testViewModel.PlayCommand.Execute(track);
+        
+            this.audioPlayerMock.Verify(x => x.Play(), Times.Exactly(2));
+            Assert.That(this.testViewModel.TrackDuration, Is.EqualTo(0));
+        }
 
-            this.audioPlayerMock.Verify(x => x.Pause(), Times.Once());
-            this.audioPlayerMock.Verify(x => x.IsPlaying, Times.Once());
-            Assert.That(isPaused, Is.True);
+        [Test]
+        public void Whether_SoundIsPaused_On_PauseCommand_Execution()
+        {
+            this.audioPlayerMock.Setup(x => x.IsPlaying).Returns(true);
+            this.audioPlayerMock.Setup(x => x.Pause());
+
+            this.testViewModel.PauseCommand.Execute(null);
+
+            this.audioPlayerMock.Verify(x => x.Pause(), Times.Once);
+            this.audioPlayerMock.Verify(x => x.IsPlaying, Times.Once);
+        }
+
+        [Test]
+        public void Whether_SoundIsResumed_On_PauseCommandExecution_When_SoundAlreadyPaused()
+        {
+            this.audioPlayerMock.Setup(x => x.IsPlaying).Returns(false);
+            this.audioPlayerMock.Setup(x => x.IsPaused).Returns(true);
+            this.audioPlayerMock.Setup(x => x.Resume());
+
+            this.testViewModel.PauseCommand.Execute(null);
+
+            this.audioPlayerMock.Verify(x => x.Pause(), Times.Never);
+            this.audioPlayerMock.Verify(x => x.Resume(), Times.Once);
+            this.audioPlayerMock.Verify(x => x.IsPlaying, Times.Once);
+            this.audioPlayerMock.Verify(x => x.IsPaused, Times.Once);
         }
 
         [SetUp]
         public void SetUp()
         {
+            this.audioPlayerMock = new Mock<IAudioPlayer>(MockBehavior.Strict);
+            this.audioPlayerMock.Setup(x => x.Dispose());
+            this.tagManagerMock = new Mock<ITagManager>(MockBehavior.Default);
             this.factory = new Fixture();
-            this.audioPlayerMock = new Mock<IAudioPlayer>();
-            this.tagManagerMock = new Mock<ITagManager>();
+            this.factory.Register<ITagManager>(() => this.tagManagerMock.Object);
+
             this.testViewModel = new MainViewModel()
             {
                 AudioPlayer = this.audioPlayerMock.Object,

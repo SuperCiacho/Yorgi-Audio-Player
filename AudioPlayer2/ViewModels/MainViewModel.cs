@@ -1,24 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using AudioPlayer2.Models;
+using AudioPlayer2.Models.Audio;
+using AudioPlayer2.Models.Playlist;
+using AudioPlayer2.Models.Playlist.Readers;
+using AudioPlayer2.Models.Playlist.Writers;
+using AudioPlayer2.Models.Tag;
 using AudioPlayer2.Properties;
 using AudioPlayer2.Utils;
-using AudioPlayer2.ViewModels;
-using AudioPlayer2.Views;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using Microsoft.Win32;
 using Ninject;
+using FileInfo = AudioPlayer2.Views.FileInfo;
 
 namespace AudioPlayer2.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
+        /// <summary>
+        ///     Initializes a new instance of the MainViewModel class.
+        /// </summary>
+        public MainViewModel(ITagManager tagManager, IPlaylist playlist)
+        {
+            this.tagManager = tagManager;
+            this.playlist = playlist;
+        }
+
         #region Fields
 
         private string status;
@@ -27,9 +43,12 @@ namespace AudioPlayer2.ViewModels
         private int trackDuration;
         private int selectedTrackIndex;
         private Track selectedTrack;
-        private Track currentTrack;
 
-        private bool isStoppedManually;
+        private bool isUserAction;
+
+        private IAudioPlayer audioPlayer;
+        private readonly ITagManager tagManager;
+        private IPlaylist playlist;
 
         private ICommand playCommand;
         private ICommand pauseCommand;
@@ -41,25 +60,12 @@ namespace AudioPlayer2.ViewModels
         private ICommand initializedCommand;
         private ICommand showFileInfoCommand;
         private ICommand removeTrackCommand;
-        private IAudioPlayer audioPlayer;
+        private ICommand sortPlaylistCommand;
+        private ICommand loadPlaylistCommand;
+        private ICommand savePlaylistCommand;
+        private ICommand openLocationCommand;
 
         #endregion
-
-        /// <summary>
-        /// Initializes a new instance of the MainViewModel class.
-        /// </summary>
-        public MainViewModel()
-        {
-            this.Tracks = new ObservableCollection<Track>();
-
-            if (this.IsInDesignMode || IsInDesignModeStatic)
-            {
-                for (int i = 0; i < 20;)
-                {
-                    this.Tracks.Add(new Track("Track " + ++i));
-                }
-            }
-        }
 
         #region Properties
 
@@ -81,16 +87,24 @@ namespace AudioPlayer2.ViewModels
 
         public ICommand UpdateStatusCommand => this.updateStatusCommand ?? (this.updateStatusCommand = new RelayCommand<float>(this.OnUpdateStatusCommand));
 
-        public ICommand InitializedCommand => this.initializedCommand ?? (this.initializedCommand = new RelayCommand(this.InitPlaylist));
+        public ICommand InitializedCommand => this.initializedCommand ?? (this.initializedCommand = new RelayCommand(this.Initialize));
 
         public ICommand ShowFileInfoCommand => this.showFileInfoCommand ?? (this.showFileInfoCommand = new RelayCommand<Track>(this.OnShowFileInfoCommand));
+
+        public ICommand OpenLocationCommand => this.openLocationCommand ?? (this.openLocationCommand = new RelayCommand<Track>(this.OnOpenLocationCommand));
+
+        public ICommand SortPlaylistCommand => this.sortPlaylistCommand ?? (this.sortPlaylistCommand = new RelayCommand<SortPlaylistBy>(this.OnSortPlaylistCommand));
+
+        public ICommand LoadPlaylistCommand => this.loadPlaylistCommand ?? (this.loadPlaylistCommand = new RelayCommand(this.OnLoadPlaylistCommand));
+
+        public ICommand SavePlaylistCommand => this.savePlaylistCommand ?? (this.savePlaylistCommand = new RelayCommand(this.OnSavePlaylistCommand));
 
         #endregion
 
         [Inject]
         public IAudioPlayer AudioPlayer
         {
-            get { return this.audioPlayer; }
+            get => this.audioPlayer;
             set
             {
                 if (this.audioPlayer != null)
@@ -106,26 +120,23 @@ namespace AudioPlayer2.ViewModels
             }
         }
 
-        [Inject]
-        public ITagManager TagManager { get; set; }
-
-        public ObservableCollection<Track> Tracks { get; }
+        public ICollectionView Tracks { get; private set; }
 
         public string Time
         {
-            get { return this.time; }
-            set { this.Set(ref this.time, value); }
+            get => this.time;
+            set => this.Set(ref this.time, value);
         }
 
         public string Status
         {
-            get { return this.status; }
-            set { this.Set(ref this.status, value); }
+            get => this.status;
+            set => this.Set(ref this.status, value);
         }
 
         public int CurrentTime
         {
-            get { return this.currentTime; }
+            get => this.currentTime;
             set
             {
                 this.Set(ref this.currentTime, value);
@@ -139,7 +150,7 @@ namespace AudioPlayer2.ViewModels
 
         public float Volume
         {
-            get { return this.audioPlayer.Volume; }
+            get => this.audioPlayer.Volume;
             set
             {
                 this.audioPlayer.Volume = value;
@@ -151,42 +162,47 @@ namespace AudioPlayer2.ViewModels
 
         public int TrackDuration
         {
-            get { return this.trackDuration; }
-            set { this.Set(ref this.trackDuration, value); }
+            get => this.trackDuration;
+            set => this.Set(ref this.trackDuration, value);
         }
 
-        public Track CurrentTrack
-        {
-            get { return this.currentTrack; }
-            set { this.Set(ref this.currentTrack, value); }
-        }
+        public Track CurrentTrack => this.playlist.CurrentTrack;
+
+        public int CurrentTrackIndex => this.playlist.CurrentTrackIndex;
 
         public Track SelectedTrack
         {
-            get { return this.selectedTrack; }
-            set { this.Set(ref this.selectedTrack, value); }
+            get => this.selectedTrack;
+            set => this.Set(ref this.selectedTrack, value);
         }
 
         public int SelectedTrackIndex
         {
-            get { return this.selectedTrackIndex; }
-            set { this.Set(ref this.selectedTrackIndex, value); }
+            get => this.selectedTrackIndex;
+            set => this.Set(ref this.selectedTrackIndex, value);
         }
-
-        public int CurrentTrackIndex => this.audioPlayer.CurrentTrackIndex;
 
         #endregion
 
         #region Methods
 
-        private void InitPlaylist()
+        private void Initialize()
         {
-            var supported = Settings.Default.SupportedFiles;
-            foreach (var path in System.IO.Directory.EnumerateFiles(@"F:\mp3\Całe Albumy\Bonobo - Black Sands")
-                .Where(p => !string.IsNullOrEmpty(p) && supported.Contains(System.IO.Path.GetExtension(p))))
+            this.AddToPlaylist(Directory.EnumerateFiles(@"G:\Muzyka", "*.*", SearchOption.AllDirectories));
+            this.audioPlayer.Playlist = this.playlist;
+
+            this.Tracks = CollectionViewSource.GetDefaultView(this.playlist.Tracks);
+            this.RaisePropertyChanged(nameof(this.Tracks));
+        }
+
+        private void AddToPlaylist(IEnumerable<string> trackPaths)
+        {
+            var supportedFiles = Settings.Default.SupportedFiles;
+            foreach (var track in trackPaths
+                        .Where(p => !string.IsNullOrEmpty(p) && supportedFiles.Contains(Path.GetExtension(p)))
+                        .Select(p => Track.Create(this.tagManager, p)))
             {
-                this.Tracks.Add(new Track(this.TagManager, path));
-                this.AudioPlayer.AddTrack(path);
+                this.playlist.Add(track);
             }
         }
 
@@ -203,24 +219,16 @@ namespace AudioPlayer2.ViewModels
 
             var result = ofd.ShowDialog();
 
-            if (result.HasValue && result.Value)
+            if (result.GetValueOrDefault())
             {
-                var ioc = IoCContainer.Instance;
-
-                foreach (var path in ofd.FileNames)
-                {
-                    this.AudioPlayer.AddTrack(path);
-                    this.Tracks.Add(ioc.Get<Track>(null, new[] { ioc.CreateConstructorArgument("path", path) }));
-                }
+                this.AddToPlaylist(ofd.FileNames);
             }
         }
 
         private void OnPlayCommand(Track track)
         {
-            if (this.AudioPlayer.IsPlaying &&
-                this.SelectedTrack.Uri.Equals(this.AudioPlayer.CurrentTrack))
+            if (track == null)
             {
-                this.AudioPlayer.Pause();
                 return;
             }
 
@@ -230,7 +238,9 @@ namespace AudioPlayer2.ViewModels
                 return;
             }
 
-            this.AudioPlayer.Play(track?.Uri);
+            this.isUserAction = true;
+            this.playlist.CurrentTrack = track;
+            this.AudioPlayer.Play();
             this.UpdateUIState();
         }
 
@@ -248,48 +258,47 @@ namespace AudioPlayer2.ViewModels
 
         private void OnStopCommand()
         {
-            this.isStoppedManually = true;
+            this.isUserAction = true;
             this.AudioPlayer.Stop();
         }
 
         private void OnNextCommand()
         {
+            this.isUserAction = true;
             this.audioPlayer.Next();
             this.UpdateUIState();
         }
 
         private void OnPreviousCommand()
         {
+            this.isUserAction = true;
             this.audioPlayer.Previous();
             this.UpdateUIState();
         }
 
         private void OnShowFileInfoCommand(Track track)
         {
-            var param = new Dictionary<string, object>()
-                        {
-                            { "track", track }
-                        };
+            var param = new Dictionary<string, object> { { "track", track } };
 
             DialogManager.CreateDialog<FileInfo, FileInfoViewModel>(track.Uri, 500, 300, param).Show();
         }
 
-        private void OnTrackProgressChanged(object sender, ProgressChangedArgs args)
+        private void OnTrackProgressChanged(object sender, TrackProgressChangedArgs args)
         {
-            this.CurrentTime = (int)args.NewPosition.TotalSeconds;
+            this.CurrentTime = (int)args.Position.TotalSeconds;
             this.TrackDuration = (int)args.TrackLength.TotalSeconds;
-            this.Time = args.NewPosition.ToString(Resources.TimeFormat);
+            this.Time = args.Position.ToString(Resources.TimeFormat);
         }
 
         private void OnPlaybackStopped(object sender, EventArgs e)
         {
-            if (this.isStoppedManually)
+            if (this.isUserAction)
             {
-                this.isStoppedManually = false;
+                this.isUserAction = false;
                 return;
             }
 
-            if (this.AudioPlayer.TrackCount < 2)
+            if (this.playlist.Size < 2)
             {
                 this.CurrentTime = 0;
                 this.TrackDuration = 1;
@@ -303,50 +312,116 @@ namespace AudioPlayer2.ViewModels
 
         private void OnUpdateStatusCommand(float value)
         {
-            Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(a => this.Status = this.currentTrack?.Name);
+            Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(a => this.Status = this.CurrentTrack?.Name);
         }
 
         private void UpdateUIState()
         {
-            var path = this.audioPlayer.CurrentTrack;
-            this.CurrentTrack = this.Tracks.FirstOrDefault(x => x.Uri.Equals(path)) ?? new Track(this.TagManager, path);
-            this.Status = this.currentTrack.Name;
-            this.TrackDuration = (int)this.currentTrack.Duration.TotalSeconds;
+            this.Status = this.CurrentTrack.Name;
+            this.TrackDuration = (int)this.CurrentTrack.Duration.TotalSeconds;
             this.RaisePropertyChanged(nameof(this.CurrentTrackIndex));
+            this.RaisePropertyChanged(nameof(this.CurrentTrack));
         }
+
         private void OnRemoveTrackCommand(RemoveTrackMode mode)
         {
             switch (mode)
             {
                 case RemoveTrackMode.All:
-                    this.Tracks.Clear();
+                    this.playlist.Clear();
                     break;
                 case RemoveTrackMode.Selected:
                     if (this.selectedTrack != null)
                     {
-                        this.Tracks.Remove(this.selectedTrack);
+                        this.playlist.Remove(this.selectedTrack);
                     }
                     break;
                 case RemoveTrackMode.Unselected:
                     var leaveIt = this.selectedTrack;
-                    this.Tracks.Clear();
-                    this.Tracks.Add(leaveIt);
+                    this.playlist.Clear();
+                    if (leaveIt != null)
+                    {
+                        this.playlist.Add(this.selectedTrack);
+                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
             }
+
+            this.RaisePropertyChanged(nameof(this.Tracks));
+        }
+
+        private async void OnLoadPlaylistCommand()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "M3U|*.m3u;*.m3u8|All|*.*",
+                Multiselect = false,
+                CheckPathExists = true,
+                CheckFileExists = true,
+                ReadOnlyChecked = true,
+                Title = "Open playlist"
+            };
+
+            if (!dialog.ShowDialog().GetValueOrDefault()) return;
+            var loader = PlaylistLoader.GetLoader(dialog.FileName);
+            var tracks = await loader.LoadAsync(this.tagManager);
+
+            if (tracks.IsEmpty())
+            {
+                MessageBox.Show(Resources.Error_Playlist_InvalidOrEmpty, "Error", MessageBoxButton.OK, MessageBoxImage.Stop);
+                return;
+            }
+            this.playlist.Clear();
+            this.playlist.Add(tracks);
+            this.RaisePropertyChanged(nameof(this.Tracks));
+        }
+
+        private void OnSavePlaylistCommand()
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = "M3U|*.m3u|M3U8|*.m3u8|All|*.*",
+                CheckPathExists = true,
+                CheckFileExists = false,
+                Title = "Save playlist"
+            };
+
+            if (!dialog.ShowDialog().GetValueOrDefault()) return;
+            var loader = PlaylistWriter.GetWriter(dialog.FileName);
+            loader.WriteAsync(this.playlist.Tracks);
+        }
+
+        private void OnSortPlaylistCommand(SortPlaylistBy mode)
+        {
+            var propertyNameToSortBy = mode.ToString();
+            var sortedBy = this.Tracks.SortDescriptions.FirstOrDefault();
+            var descending = propertyNameToSortBy.Equals(sortedBy.PropertyName) && sortedBy.Direction == ListSortDirection.Ascending;
+            sortedBy =
+                new SortDescription(propertyNameToSortBy,
+                    descending
+                        ? ListSortDirection.Descending
+                        : ListSortDirection.Ascending);
+
+            this.Tracks.SortDescriptions.Clear();
+            this.Tracks.SortDescriptions.Add(sortedBy);
+            this.playlist.SortAsync(mode, descending);
+        }
+
+        private void OnOpenLocationCommand(Track track)
+        {
+           Process.Start("explorer.exe", $"/select, \"{track.Uri}\"");
         }
 
         public override void Cleanup()
         {
             base.Cleanup();
 
-            this.audioPlayer.Dispose();
             this.audioPlayer.ProgressChanged -= this.OnTrackProgressChanged;
             this.audioPlayer.PlaybackStopped -= this.OnPlaybackStopped;
+            this.audioPlayer.Dispose();
         }
 
         #endregion
-
     }
 }

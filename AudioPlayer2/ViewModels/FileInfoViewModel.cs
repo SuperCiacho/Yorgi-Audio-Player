@@ -1,4 +1,6 @@
 using AudioPlayer2.Models;
+using AudioPlayer2.Models.Playlist;
+using AudioPlayer2.Models.Tag;
 using GalaSoft.MvvmLight;
 using TagLib;
 

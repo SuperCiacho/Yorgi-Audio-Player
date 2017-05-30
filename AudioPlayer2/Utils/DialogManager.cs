@@ -1,6 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
+using AudioPlayer2.Models;
+using AudioPlayer2.Views;
 using GalaSoft.MvvmLight;
 using Ninject.Parameters;
 

@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
-using AudioPlayer2.Models;
+using AudioPlayer2.Models.Audio;
+using AudioPlayer2.Models.Playlist;
+using AudioPlayer2.Models.Tag;
 using AudioPlayer2.ViewModels;
 using GalaSoft.MvvmLight;
 using Ninject;
@@ -19,6 +21,7 @@ namespace AudioPlayer2.Utils
             kernel.Bind<IAudioPlayer>().To<AudioPlayer>();
             kernel.Bind<ICleanup>().To<MainViewModel>();
             kernel.Bind<ITagManager>().To<TagManager>().InSingletonScope();
+            kernel.Bind<IPlaylist>().To<Playlist>();
             kernel.Bind<ITaggedFile>().To<TaggedFile>();
         }
 

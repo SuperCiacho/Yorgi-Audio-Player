@@ -7,37 +7,16 @@
         xmlns:viewModels="clr-namespace:AudioPlayer2.ViewModels"
         xmlns:pb="clr-namespace:AudioPlayer2.Behaviors"
         xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-        xmlns:models="clr-namespace:AudioPlayer2.Models"
-        mc:Ignorable="d" d:DesignHeight="500" d:DesignWidth="350"
+        xmlns:models="clr-namespace:AudioPlayer2.Models;assembly=AudioPlayer2.Models"
+        xmlns:playlist="clr-namespace:AudioPlayer2.Models.Playlist;assembly=AudioPlayer2.Models"
+        mc:Ignorable="d" d:DesignHeight="800" d:DesignWidth="400"
         d:DataContext="{d:DesignInstance Type=viewModels:MainViewModel}"
         Background="{StaticResource AppBackground}"
-        Title="YorgiAmp" Height="500" MinWidth="350" MaxWidth="350">
+        Title="YorgiAmp" Height="800" MinWidth="400" MaxWidth="400">
     <Window.Resources>
         <FrameworkElement x:Key="UIProxy" DataContext="{Binding}"/>
         <converters:DebugConverter x:Key="DebugConverter" />
         <converters:DataGridRowBackgroundSelector x:Key="MultiValueComparer" />
-
-        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-            <Setter Property="Background" Value="{StaticResource ToolbarBackground}" />
-            <Setter Property="Foreground" Value="{StaticResource TextColor}" />
-            <Setter Property="StaysOpenOnClick" Value="True" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="{x:Type MenuItem}">
-                        <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
-                                BorderThickness="0" Background="{TemplateBinding Background}"
-                            Command="{TemplateBinding Command}" CommandParameter="{TemplateBinding CommandParameter}" CommandTarget="{TemplateBinding CommandTarget}">
-                            <StackPanel Orientation="Horizontal">
-                                <ContentControl Content="{TemplateBinding Icon}" MaxHeight="30" />
-                                <TextBlock VerticalAlignment="Center" Margin="4,0" 
-                                           Text="{TemplateBinding Header}" Foreground="{StaticResource TextColor}"
-                                           />
-                            </StackPanel>
-                        </Button>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <Style TargetType="{x:Type DataGridRow}"  BasedOn="{StaticResource {x:Type DataGridRow}}">
             <Style.Triggers>
@@ -54,16 +33,18 @@
             <Setter Property="Background" Value="Transparent" />
         </Style>
 
-        <Style TargetType="DataGridRowHeader" BasedOn="{StaticResource {x:Type DataGridRowHeader}}">
+        <Style TargetType="DataGridRowHeader">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
                     <Setter Property="Background" Value="#AC233B67" />
                 </DataTrigger>
             </Style.Triggers>
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
             <Setter Property="HorizontalContentAlignment" Value="Right" />
             <Setter Property="Background" Value="Transparent" />
         </Style>
+
+<!--        <Style TargetType="{x:Type DataGridHeaderBorder}"></Style>-->
 
         <Style x:Key="CustomCellStyle" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Type DataGridCell}}" >
             <Style.Triggers>
@@ -75,7 +56,7 @@
             <Setter Property="Foreground" Value="{StaticResource TextColor}" />
         </Style>
 
-        <Style x:Key="MyFocusVisualStyte" >
+        <Style x:Key="SliderFocusVisualStyle" >
             <Setter Property="Control.Template">
                 <Setter.Value>
                     <ControlTemplate>
@@ -185,12 +166,7 @@
                 </Grid.RowDefinitions>
                 <TickBar x:Name="TopTick" Visibility="Collapsed" Fill="LightGray" Placement="Top" SnapsToDevicePixels="True"
                  Height="4" Margin="0,0,0,2" />
-                <Border x:Name="TrackBackground"
-                Grid.Row="1"
-                Margin="10,0"
-                BorderThickness="2"
-                BorderBrush="LightGray"
-                VerticalAlignment="Center" Height="4" />
+                <Border x:Name="TrackBackground" Grid.Row="1" Margin="10,0" BorderThickness="2" BorderBrush="LightGray" VerticalAlignment="Center" Height="4" />
                 <Track x:Name="PART_Track" Grid.Row="1">
                     <Track.DecreaseRepeatButton>
                         <RepeatButton Command="{x:Static Slider.DecreaseLarge}"  Style="{StaticResource SliderRepeatButtonStyle}" />
@@ -329,7 +305,7 @@
         </ControlTemplate>
 
         <Style x:Key="SliderStyle" TargetType="{x:Type Slider}">
-            <Setter Property="FocusVisualStyle" Value="{StaticResource MyFocusVisualStyte}" />
+            <Setter Property="FocusVisualStyle" Value="{StaticResource SliderFocusVisualStyle}" />
             <Setter Property="SnapsToDevicePixels" Value="true" />
             <Setter Property="OverridesDefaultStyle" Value="true" />
             <Setter Property="IsMoveToPointEnabled" Value="True" />
@@ -365,38 +341,6 @@
             </Style.Triggers>
         </Style>
 
-        <ControlTemplate x:Key="RoundButton" TargetType="{x:Type ButtonBase}">
-            <Border x:Name="border"  SnapsToDevicePixels="True" CornerRadius="15"
-                    BorderBrush="SlateGray" BorderThickness="{TemplateBinding BorderThickness}" 
-                    Background="{StaticResource ToolbarBackground}">
-                <ContentPresenter x:Name="contentPresenter" ContentTemplate="{TemplateBinding ContentTemplate}" 
-                                  Content="{TemplateBinding Content}" ContentStringFormat="{TemplateBinding ContentStringFormat}"
-                                  Focusable="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" Margin="{TemplateBinding Padding}" 
-                                  RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
-            </Border>
-            <ControlTemplate.Triggers>
-                <Trigger Property="Button.IsDefaulted" Value="True">
-                    <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource {x:Static SystemColors.HighlightBrushKey}}"/>
-                </Trigger>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" TargetName="border" Value="#FFBEE6FD"/>
-                    <Setter Property="BorderBrush" TargetName="border" Value="#FF3C7FB1"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" TargetName="border" Value="#FFC4E5F6"/>
-                    <Setter Property="BorderBrush" TargetName="border" Value="#FF2C628B"/>
-                </Trigger>
-                <Trigger Property="ToggleButton.IsChecked" Value="True">
-                    <Setter Property="Background" TargetName="border" Value="#FFBCDDEE"/>
-                    <Setter Property="BorderBrush" TargetName="border" Value="#FF245A83"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Background" TargetName="border" Value="#FFF4F4F4"/>
-                    <Setter Property="BorderBrush" TargetName="border" Value="#FFADB2B5"/>
-                    <Setter Property="TextElement.Foreground" TargetName="contentPresenter" Value="#FF838383"/>
-                </Trigger>
-            </ControlTemplate.Triggers>
-        </ControlTemplate>
     </Window.Resources>
     <i:Interaction.Triggers>
         <i:EventTrigger EventName="Loaded">
@@ -420,7 +364,6 @@
 
         <Slider Grid.Row="1" Grid.Column="0"
                 HorizontalAlignment="Stretch" Margin="4,4,4,5"
-                
                 Value="{Binding CurrentTime}" Maximum="{Binding TrackDuration}"
                 Style="{StaticResource TimeSliderStyle}"
                 />
@@ -489,7 +432,7 @@
                   HeadersVisibility="Row" SelectionMode="Single" 
                   CanUserDeleteRows="True" CanUserResizeRows="False" CanUserAddRows="False"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                  Background="{StaticResource AppBackground}" BorderThickness="0"
+                  Background="Transparent" BorderThickness="0"
                   CellStyle="{StaticResource CustomCellStyle}"
                   pb:PlaylistBehaviours.RowNumering="True"
                   >
@@ -499,33 +442,50 @@
                 </i:EventTrigger>
             </i:Interaction.Triggers>
             <DataGrid.Resources>
-                <Style x:Key="CenteredElement" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Style x:Key="NameColumnStyle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource {x:Type TextBlock}}">
                     <Setter Property="VerticalAlignment" Value="Center" />
+                    <Setter Property="Foreground" Value="{StaticResource TextColor}" />
+                    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                 </Style>
-                <Style x:Key="WrappedElement" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource CenteredElement}">
-                    <Setter Property="HorizontalAlignment" Value="Center" />
+                <Style x:Key="TimeColumnStyle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource NameColumnStyle}">
+                    <Setter Property="HorizontalAlignment" Value="Right" />
                     <Setter Property="Margin" Value="2,0,5,0" />
+                    <Setter Property="TextTrimming" Value="None" />
                 </Style>
             </DataGrid.Resources>
             <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="File info" Command="{Binding ShowFileInfoCommand}" CommandParameter="{Binding SelectedTrack}">
-
+                <ContextMenu Width="150">
+                    <MenuItem Header="Play" Command="{Binding PlayCommand}" CommandParameter="{Binding SelectedTrack}">
+                        <MenuItem.Icon>
+                            <Image Source="../Images/audio_play.png" Width="20" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem Header="File info"
+                              Command="{Binding ShowFileInfoCommand}" CommandParameter="{Binding SelectedTrack}">
+                        <MenuItem.Icon>
+                            <Image Source="../Images/contextmenu_fileinfo.png" Width="20" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Open location"
+                              Command="{Binding OpenLocationCommand}" CommandParameter="{Binding SelectedTrack}">
+                        <MenuItem.Icon>
+                            <Image Source="../Images/contextmenu_filelocation.png" Width="20" />
+                        </MenuItem.Icon>
                     </MenuItem>
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.RowHeaderTemplate>
                 <DataTemplate>
                     <TextBlock Text="{Binding Path=Header, RelativeSource={RelativeSource AncestorType=DataGridRow, Mode=FindAncestor}}" 
-                               Foreground="{StaticResource TextColor}"
-                               HorizontalAlignment="Right" VerticalAlignment="Center" TextAlignment="Center" Padding="2"/>
+                               Foreground="{StaticResource TextColor}" HorizontalAlignment="Right" VerticalAlignment="Center" TextAlignment="Center" Padding="4,4,4,4"/>
                 </DataTemplate>
             </DataGrid.RowHeaderTemplate>
             <DataGrid.Columns>
-                <DataGridTextColumn Binding="{Binding Name}" Width="*" IsReadOnly="True" ElementStyle="{StaticResource CenteredElement}"/>
+                <DataGridTextColumn Binding="{Binding Name}" Width="*" IsReadOnly="True" ElementStyle="{StaticResource NameColumnStyle}"/>
 
-                <DataGridTextColumn IsReadOnly="True"
-                                    ElementStyle="{StaticResource WrappedElement}"
+                <DataGridTextColumn IsReadOnly="True" Width="45"
+                                    ElementStyle="{StaticResource TimeColumnStyle}"
                                     Binding="{Binding Duration, StringFormat='m\\:ss'}" 
                                     />
             </DataGrid.Columns>
@@ -571,17 +531,17 @@
                 <MenuItem.Header>
                     <Image Source="../Images/toolbar_sort.png"/>
                 </MenuItem.Header>
-                <MenuItem Header="By name">
+                <MenuItem Header="By name" Command="{Binding SortPlaylistCommand}" CommandParameter="{x:Static playlist:SortPlaylistBy.Name}">
                     <MenuItem.Icon>
                         <Image Source="../Images/toolbar_sort_byname.png"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="By artist">
+                <MenuItem Header="By artist" Command="{Binding SortPlaylistCommand}" CommandParameter="{x:Static playlist:SortPlaylistBy.Artist}">
                     <MenuItem.Icon>
                         <Image Source="../Images/toolbar_sort_byartist.png"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="By date">
+                <MenuItem Header="By time" Command="{Binding SortPlaylistCommand}" CommandParameter="{x:Static playlist:SortPlaylistBy.Duration}">
                     <MenuItem.Icon>
                         <Image Source="../Images/toolbar_sort_bydate.png" />
                     </MenuItem.Icon>
@@ -591,24 +551,22 @@
                 <MenuItem.Header>
                     <Image Source="../Images/toolbar_playlist.png"/>
                 </MenuItem.Header>
-                <MenuItem Header="Load">
+                <MenuItem Header="Load" Command="{Binding LoadPlaylistCommand}">
                     <MenuItem.Icon>
                         <Image Source="../Images/toolbar_playlist_load.png" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Save">
+                <MenuItem Header="Save"  Command="{Binding SavePlaylistCommand}">
                     <MenuItem.Icon>
                         <Image Source="../Images/toolbar_playlist_save.png" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Clear">
+                <MenuItem Header="Manage" Visibility="Collapsed">
                     <MenuItem.Icon>
                         <Image Source="../Images/toolbar_playlist_clear.png" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
-
-
         </Menu>
     </Grid>
 </Window>

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace AudioPlayer2.Properties {
+namespace AudioPlayer2.Models.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace AudioPlayer2.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("AudioPlayer2.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("AudioPlayer2.Models.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -61,38 +61,11 @@ namespace AudioPlayer2.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Invalid file format or empty playlist has been tried to load.\r\nPlaylist loading process aborted.
+        ///   Looks up a localized string similar to #EXTM3U.
         /// </summary>
-        internal static string Error_Playlist_InvalidOrEmpty {
+        internal static string M3UOpenTag {
             get {
-                return ResourceManager.GetString("Error_Playlist_InvalidOrEmpty", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Supported|*.mp3;*.wav;*.ogg;*.flac|MPEG-3|*.mp3|Microsoft Wave|*.wav|Ogg Vorbis|*.ogg|Free Loseless Audio Codec|*.flac|All|*.*.
-        /// </summary>
-        internal static string SupportedFilesFilter {
-            get {
-                return ResourceManager.GetString("SupportedFilesFilter", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to mm\:ss.
-        /// </summary>
-        internal static string TimeFormat {
-            get {
-                return ResourceManager.GetString("TimeFormat", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Volume: {0:##0}%.
-        /// </summary>
-        internal static string VolumeFormat {
-            get {
-                return ResourceManager.GetString("VolumeFormat", resourceCulture);
+                return ResourceManager.GetString("M3UOpenTag", resourceCulture);
             }
         }
     }

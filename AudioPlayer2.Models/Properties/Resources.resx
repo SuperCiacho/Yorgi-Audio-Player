@@ -117,17 +117,7 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="VolumeFormat" xml:space="preserve">
-    <value>Volume: {0:##0}%</value>
-  </data>
-  <data name="TimeFormat" xml:space="preserve">
-    <value>mm\:ss</value>
-  </data>
-  <data name="SupportedFilesFilter" xml:space="preserve">
-    <value>Supported|*.mp3;*.wav;*.ogg;*.flac|MPEG-3|*.mp3|Microsoft Wave|*.wav|Ogg Vorbis|*.ogg|Free Loseless Audio Codec|*.flac|All|*.*</value>
-    <comment>Supported files filter for open file dialog</comment>
-  </data>
-  <data name="Error_Playlist_InvalidOrEmpty" xml:space="preserve">
-    <value>Invalid file format or empty playlist has been tried to load.\r\nPlaylist loading process aborted</value>
+  <data name="M3UOpenTag" xml:space="preserve">
+    <value>#EXTM3U</value>
   </data>
 </root>
