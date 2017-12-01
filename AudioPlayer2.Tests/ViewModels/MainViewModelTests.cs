@@ -15,6 +15,7 @@ namespace AudioPlayer2.ViewModels.Tests
         private MainViewModel testViewModel;
         private Mock<IAudioPlayer> audioPlayerMock;
         private Mock<ITagManager> tagManagerMock;
+        private Mock<IPlaylist> playlistMock;
 
         [Test]
         public void Whether_PlayingSound_On_PlayCommand_Execution()
@@ -74,24 +75,23 @@ namespace AudioPlayer2.ViewModels.Tests
         public void SetUp()
         {
             this.audioPlayerMock = new Mock<IAudioPlayer>(MockBehavior.Strict);
-            this.audioPlayerMock.Setup(x => x.Dispose());
-            this.tagManagerMock = new Mock<ITagManager>(MockBehavior.Default);
+            this.tagManagerMock = new Mock<ITagManager>();
+            this.playlistMock = new Mock<IPlaylist>();
             this.factory = new Fixture();
             this.factory.Register<ITagManager>(() => this.tagManagerMock.Object);
+            this.factory.Register<IPlaylist>(() => this.playlistMock.Object);
 
-            this.testViewModel = new MainViewModel()
-            {
-                AudioPlayer = this.audioPlayerMock.Object,
-                TagManager = this.tagManagerMock.Object
-            };
+            this.testViewModel = this.factory.Create<MainViewModel>();
         }
 
         [TearDown]
         public void CleanUp()
         {
             this.testViewModel.Cleanup();
-            this.testViewModel = null;
+           // this.testViewModel = null;
             this.audioPlayerMock = null;
+            this.playlistMock = null;
+            this.tagManagerMock = null;
         }
     }
 }
