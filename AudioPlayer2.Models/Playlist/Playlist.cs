@@ -2,17 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AudioPlayer2.Models.Playlist.Comparers;
+using AudioPlayer2.Models.Tag;
 
 namespace AudioPlayer2.Models.Playlist
 {
     internal sealed class Playlist : IPlaylist
     {
+        private readonly ITagManager tagManager;
         private readonly List<Track> tracks;
         private Track currentTrack;
         private bool isNewTrackAssigned;
 
-        public Playlist()
+        public Playlist(ITagManager tagManager)
         {
+            this.tagManager = tagManager;
             this.tracks = new List<Track>();
         }
 
@@ -25,6 +28,7 @@ namespace AudioPlayer2.Models.Playlist
                 {
                     this.currentTrack = value;
                     this.isNewTrackAssigned = true;
+                    this.CurrentTrackChanged?.Invoke(this, value);
                 }
 
                 if (value == null)
@@ -38,13 +42,28 @@ namespace AudioPlayer2.Models.Playlist
 
         public int CurrentTrackIndex { get; private set; } = int.MinValue;
 
+        public event EventHandler<Track> CurrentTrackChanged;
+
         public int Size => this.tracks.Count;
+
+        public void Add(string trackToAdd)
+        {
+            this.Add(Track.Create(this.tagManager, trackToAdd));
+        }
 
         public void Add(Track trackToAdd)
         {
             this.tracks.Add(trackToAdd);
         }
-        
+
+        public void Add(IEnumerable<string> tracksToAdd)
+        {
+            foreach (var track in tracksToAdd)
+            {
+                this.Add(track);
+            }
+        }
+
         public void Add(IEnumerable<Track> tracksToAdd)
         {
             foreach (var track in tracksToAdd)

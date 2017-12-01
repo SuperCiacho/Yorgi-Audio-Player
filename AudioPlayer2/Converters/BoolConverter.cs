@@ -11,15 +11,19 @@ namespace AudioPlayer2.Converters
         {
             var stringParam = parameter as string;
 
-            var boolVal = (bool?) value ?? false;
+            var boolVal = (bool?)value ?? false;
+            var converted = value;
 
-            switch (stringParam)
+            if (targetType == typeof(bool))
             {
-                case "Invert": return !boolVal;
-                case "Vis": return boolVal ? Visibility.Visible : Visibility.Collapsed;
-                default:
-                    return boolVal;
+                if (stringParam == "Invert") converted = !boolVal;
             }
+            else if (targetType == typeof(Visibility))
+            {
+                converted = boolVal ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            return converted;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

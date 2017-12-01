@@ -10,9 +10,16 @@ using Ninject.Parameters;
 
 namespace AudioPlayer2.Utils
 {
-    internal class DialogManager
+    public interface IDialogManager
     {
-        public static Window CreateDialog<TView, TViewModel>(string caption, int height, int width, Dictionary<string, object> vmParameters = null) 
+        Window CreateDialog<TView, TViewModel>(string caption, int height, int width, Dictionary<string, object> vmParameters = null) 
+            where TView : FrameworkElement
+            where TViewModel : ViewModelBase;
+    }
+
+    internal class DialogManager : IDialogManager
+    {
+        public Window CreateDialog<TView, TViewModel>(string caption, int height, int width, Dictionary<string, object> vmParameters = null) 
             where TView : FrameworkElement
             where TViewModel : ViewModelBase
         {

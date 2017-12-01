@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AudioPlayer2.Models.Playlist
@@ -11,11 +12,15 @@ namespace AudioPlayer2.Models.Playlist
         int Size { get; }
         Track CurrentTrack { get; set; }
         int CurrentTrackIndex { get; }
+        event EventHandler<Track> CurrentTrackChanged;
 
         IReadOnlyCollection<Track> Tracks { get; }
 
         void Add(Track trackToAdd);
+        void Add(string trackToAdd);
         void Add(IEnumerable<Track> tracksToAdd);
+        void Add(IEnumerable<string> tracksToAdd);
+
         void Remove(Track trackToRemove);
         void Remove(IEnumerable<Track> tracksToRemove);
         void Clear();
@@ -24,5 +29,6 @@ namespace AudioPlayer2.Models.Playlist
         string GetTrackPath(PlayerAction playerAction);
 
         Task SortAsync(SortPlaylistBy mode, bool @descending);
+
     }
 }
