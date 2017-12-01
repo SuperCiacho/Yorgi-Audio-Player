@@ -25,5 +25,6 @@ namespace AudioPlayer2.Models.Audio
 
         event EventHandler<TrackProgressChangedArgs> ProgressChanged;
         event EventHandler<PlaybackStoppedEventArgs> PlaybackStopped;
+        event EventHandler<EventArgs> PlaybackStarted;
     }
 }

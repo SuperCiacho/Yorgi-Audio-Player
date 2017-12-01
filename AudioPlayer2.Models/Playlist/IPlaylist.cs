@@ -26,7 +26,6 @@ namespace AudioPlayer2.Models.Playlist
         void Clear();
 
         Track GetTrack(PlayerAction playerAction);
-        string GetTrackPath(PlayerAction playerAction);
 
         Task SortAsync(SortPlaylistBy mode, bool @descending);
 

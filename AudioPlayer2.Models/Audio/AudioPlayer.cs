@@ -28,11 +28,11 @@ namespace AudioPlayer2.Models.Audio
         /// </summary>
         private float volume;
 
-        private string currentTrack;
-        private MMDevice playbackDevice;
+        private readonly MMDevice playbackDevice;
         private bool isDisposed;
 
         private Timer timer;
+        private IPlaylist playlist;
 
         #endregion
 
@@ -52,19 +52,38 @@ namespace AudioPlayer2.Models.Audio
 
         #region Events
         public event EventHandler<TrackProgressChangedArgs> ProgressChanged;
-
+        public event EventHandler<EventArgs> PlaybackStarted;
         public event EventHandler<PlaybackStoppedEventArgs> PlaybackStopped;
+
         #endregion
 
         #region Properties
 
-        public IPlaylist Playlist { get; set; }
+        public IPlaylist Playlist
+        {
+            get { return this.playlist; }
+            set
+            {
+                if (this.playlist != null)
+                {
+                    this.playlist.CurrentTrackChanged -= this.OnPlaylistCurrentTrackChanged;
+                }
 
-        public bool IsPlaying => this.playbackMethod.PlaybackState == PlaybackState.Playing;
+                this.playlist = value;
 
-        public bool IsPaused => this.playbackMethod.PlaybackState == PlaybackState.Paused;
+                if (this.playlist != null)
+                {
+                    this.playlist.CurrentTrackChanged += this.OnPlaylistCurrentTrackChanged;
+                }
 
-        public bool IsStopped => this.playbackMethod.PlaybackState == PlaybackState.Stopped;
+            }
+        }
+
+        public bool IsPlaying => this.playbackMethod?.PlaybackState == PlaybackState.Playing;
+
+        public bool IsPaused => this.playbackMethod == null || this.playbackMethod.PlaybackState == PlaybackState.Paused;
+
+        public bool IsStopped => this.playbackMethod == null || this.playbackMethod.PlaybackState == PlaybackState.Stopped;
 
         public float Volume
         {
@@ -85,8 +104,8 @@ namespace AudioPlayer2.Models.Audio
 
         public TimeSpan Position
         {
-            get { return this.audioSource?.GetPosition() ?? TimeSpan.Zero; }
-            set { this.audioSource.SetPosition(value); }
+            get => this.audioSource?.GetPosition() ?? TimeSpan.Zero;
+            set => this.audioSource.SetPosition(value);
         }
 
         public TimeSpan Length => this.audioSource?.GetLength() ?? TimeSpan.Zero;
@@ -94,19 +113,23 @@ namespace AudioPlayer2.Models.Audio
 
         #region Methods
 
-        public void Play()
+        private void OnPlaylistCurrentTrackChanged(object sender, Track track)
         {
-            this.Play(PlayerAction.Selected);
+            this.Play(track);
         }
 
-        private void Play(PlayerAction playerAction)
+        public void Play()
+        {
+            this.playlist.GetTrack(PlayerAction.Selected);
+        }
+
+        private void Play(Track currentTrack)
         {
             this.StopTracking();
 
             this.CleanUpPlayback();
 
-            this.currentTrack = this.Playlist.GetTrackPath(playerAction);
-            this.audioSource = CodecFactory.Instance.GetCodec(this.currentTrack)
+            this.audioSource = CodecFactory.Instance.GetCodec(currentTrack.Uri)
                 .ToSampleSource()
                 .ToWaveSource();
             this.playbackMethod = new WasapiOut
@@ -116,6 +139,7 @@ namespace AudioPlayer2.Models.Audio
             };
             this.playbackMethod.Initialize(this.audioSource);
             this.playbackMethod.Volume = this.volume;
+            this.playbackMethod.Stopped += this.PlaybackStopped;
             this.playbackMethod.Play();
 
             this.StartTracking();
@@ -138,31 +162,27 @@ namespace AudioPlayer2.Models.Audio
         {
             this.playbackMethod.Stop();
             this.playbackMethod.Stopped -= this.PlaybackStopped;
-            this.ProgressChanged?.Invoke(this.currentTrack, TrackProgressChangedArgs.Empty);
+            this.ProgressChanged?.Invoke(this.playlist.CurrentTrack, TrackProgressChangedArgs.Empty);
         }
 
         public void Previous()
         {
-            this.Play(PlayerAction.Previous);
+            this.Playlist.GetTrack(PlayerAction.Previous);
         }
 
         public void Next()
         {
-            this.Play(PlayerAction.Next);
+            this.Playlist.GetTrack(PlayerAction.Next);
         }
 
         private void StartTracking()
         {
             this.timer = new Timer(this.Tracking, this, 0, SleepTime);
+            this.PlaybackStarted?.Invoke(this.playlist.CurrentTrack, EventArgs.Empty);
         }
 
         private void StopTracking()
         {
-            if (this.PlaybackStopped != null)
-            {
-                this.playbackMethod.Stopped -= this.PlaybackStopped;
-            }
-
             if (this.timer != null)
             {
                 this.timer.Dispose();
@@ -173,13 +193,15 @@ namespace AudioPlayer2.Models.Audio
         private void Tracking(object player)
         {
             var audioPlayer = player as AudioPlayer;
-            this.ProgressChanged?.Invoke(audioPlayer.currentTrack, new TrackProgressChangedArgs(audioPlayer.Position, audioPlayer.Length));
+            if (audioPlayer == null) return;
+            this.ProgressChanged?.Invoke(audioPlayer.playlist.CurrentTrack, new TrackProgressChangedArgs(audioPlayer.Position, audioPlayer.Length));
         }
 
         private void CleanUpPlayback()
         {
             if (this.playbackMethod != null)
             {
+                this.playbackMethod.Stopped -= this.PlaybackStopped;
                 this.playbackMethod.Dispose();
                 this.playbackMethod = null;
             }
@@ -197,7 +219,6 @@ namespace AudioPlayer2.Models.Audio
             Settings.Default.Save();
 
             this.Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         private void Dispose(bool isDisposing)

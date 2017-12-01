@@ -19,8 +19,6 @@ namespace AudioPlayer2.ViewModels
         private string time;
         private int currentTime;
         private int trackDuration;
-        private int selectedTrackIndex;
-        private Track selectedTrack;
 
         private bool isUserAction;
 
@@ -43,12 +41,12 @@ namespace AudioPlayer2.ViewModels
         public MainViewModel(IAudioPlayer audioPlayer, IPlaylist playlist)
         {
             this.playlist = playlist;
-            this.playlist.CurrentTrackChanged += this.OnPlaylistCurrentTrackChanged;
 
             this.audioPlayer = audioPlayer;
             this.audioPlayer.Playlist = playlist;
             this.audioPlayer.ProgressChanged += this.OnTrackProgressChanged;
             this.audioPlayer.PlaybackStopped += this.OnPlaybackStopped;
+            this.audioPlayer.PlaybackStarted += this.OnPlaybackStarted;
         }
 
         #region Properties
@@ -117,11 +115,6 @@ namespace AudioPlayer2.ViewModels
 
         #region Methods
 
-        private void OnPlaylistCurrentTrackChanged(object sender, Track track)
-        {
-            this.OnPlayCommand(track);
-        }
-
         private void OnPlayCommand(Track track)
         {
             if (track == null)
@@ -135,7 +128,6 @@ namespace AudioPlayer2.ViewModels
                 return;
             }
 
-            this.isUserAction = true;
             this.audioPlayer.Play();
             this.UpdateUIState();
         }
@@ -187,7 +179,7 @@ namespace AudioPlayer2.ViewModels
 
             if (result.GetValueOrDefault())
             {
-               // this.AddToPlaylist(ofd.FileNames);
+               this.playlist.Add(ofd.FileNames);
             }
         }
 
@@ -196,6 +188,11 @@ namespace AudioPlayer2.ViewModels
             this.CurrentTime = (int)args.Position.TotalSeconds;
             this.TrackDuration = (int)args.TrackLength.TotalSeconds;
             this.Time = args.Position.ToString(Resources.TimeFormat);
+        }
+
+        private void OnPlaybackStarted(object sender, EventArgs e)
+        {
+            this.UpdateUIState();
         }
 
         private void OnPlaybackStopped(object sender, EventArgs e)
@@ -213,7 +210,6 @@ namespace AudioPlayer2.ViewModels
             }
             else
             {
-                // this.SelectedTrackIndex++;
                 this.audioPlayer.Next();
             }
         }
